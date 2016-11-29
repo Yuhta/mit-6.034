@@ -16,7 +16,7 @@
 # the distributive law.
 
 # Your goal is to fill in the do_multiply() function so that multiplication
-# can be simplified as intended. 
+# can be simplified as intended.
 
 # Testing will be mathematical:  If you return a flat list that
 # evaluates to the same value as the original expression, you will
@@ -69,7 +69,7 @@ class Sum(list, Expression):
     """
     def __repr__(self):
         return "Sum(%s)" % list.__repr__(self)
-    
+
     def simplify(self):
         """
         This is the starting point for the task you need to perform. It
@@ -99,7 +99,7 @@ class Product(list, Expression):
     """
     def __repr__(self):
         return "Product(%s)" % list.__repr__(self)
-    
+
     def simplify(self):
         """
         To simplify a product, we need to multiply all its factors together
@@ -173,6 +173,9 @@ def do_multiply(expr1, expr2):
     Look above for details on the Sum and Product classes. The Python operator
     '*' will not help you.
     """
-    # Replace this with your solution.
-    raise NotImplementedError
-
+    if isinstance(expr1, Product) and isinstance(expr2, Product):
+        return Product([expr1, expr2]).flatten()
+    elif isinstance(expr1, Sum) and isinstance(expr2, Product):
+        return do_multiply(expr2, expr1)
+    else:
+        return Sum([Product([expr1, e]) for e in expr2]).simplify()
