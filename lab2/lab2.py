@@ -219,11 +219,10 @@ def is_admissible(graph, goal):
     return True
 
 def is_consistent(graph, goal):
-    for n0 in graph.nodes:
-        for (n, d) in viewitems(distances(graph, n0)):
-            if abs(graph.get_heuristic(n0, goal) -
-                   graph.get_heuristic(n, goal)) > d:
-                return False
+    for e in graph.edges:
+        if abs(graph.get_heuristic(e.node1, goal) -
+               graph.get_heuristic(e.node2, goal)) > e.length:
+            return False
     return True
 
 HOW_MANY_HOURS_THIS_PSET_TOOK = '42'
