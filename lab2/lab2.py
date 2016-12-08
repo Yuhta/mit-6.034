@@ -213,17 +213,13 @@ def distances(graph, goal):
     return dist
 
 def is_admissible(graph, goal):
-    for (n, d) in viewitems(distances(graph, goal)):
-        if graph.get_heuristic(n, goal) > d:
-            return False
-    return True
+    return all(graph.get_heuristic(n, goal) <= d
+               for (n, d) in viewitems(distances(graph, goal)))
 
 def is_consistent(graph, goal):
-    for e in graph.edges:
-        if abs(graph.get_heuristic(e.node1, goal) -
-               graph.get_heuristic(e.node2, goal)) > e.length:
-            return False
-    return True
+    return all(abs(graph.get_heuristic(e.node1, goal) -
+                   graph.get_heuristic(e.node2, goal)) <= e.length
+               for e in graph.edges)
 
 HOW_MANY_HOURS_THIS_PSET_TOOK = '42'
 WHAT_I_FOUND_INTERESTING = '42'
