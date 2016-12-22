@@ -14,7 +14,7 @@ from util import INFINITY
 #      1. MM will play better than AB.
 #      2. AB will play better than MM.
 #      3. They will play with the same level of skill.
-ANSWER1 = 0
+ANSWER1 = 3
 
 # 1.2. Two computerized players are playing a game with a time limit. Player MM
 # does minimax search with iterative deepening, and player AB does alpha-beta
@@ -24,7 +24,7 @@ ANSWER1 = 0
 #   1. MM will play better than AB.
 #   2. AB will play better than MM.
 #   3. They will play with the same level of skill.
-ANSWER2 = 0
+ANSWER2 = 2
 
 ### 2. Connect Four
 from connectfour import *
@@ -36,7 +36,7 @@ import tree_searcher
 ## the game interactively. Be sure to re-comment them when you're done with
 ## them.  Please don't turn in a problem set that sits there asking the
 ## grader-bot to play a game!
-## 
+##
 ## Uncomment this line to play a game as white:
 #run_game(human_player, basic_player)
 
@@ -56,8 +56,13 @@ def focused_evaluate(board):
     that board is for the current player.
     A return value >= 1000 means that the current player has won;
     a return value <= -1000 means that the current player has lost
-    """    
-    raise NotImplementedError
+    """
+    if board.is_game_over():
+        return -1000
+    for col in xrange(7):
+        if board.do_move(col).is_win() == board.get_current_player_id():
+            return 1000
+    return basic_evaluate(board)
 
 
 ## Create a "player" function that uses the focused_evaluate function
@@ -81,8 +86,19 @@ def alpha_beta_search(board, depth,
                       # The default functions set here will work
                       # for connect_four.
                       get_next_moves_fn=get_all_next_moves,
-		      is_terminal_fn=is_terminal):
-    raise NotImplementedError
+                      is_terminal_fn=is_terminal):
+    def value(board, depth, alpha, beta):
+        if is_terminal_fn(depth, board):
+            return eval_fn(board)
+        for _, new_board in get_next_moves_fn(board):
+            val = -value(new_board, depth - 1, -beta, -alpha)
+            if val > alpha:
+                alpha = val
+            if alpha >= beta:
+                return alpha
+        return alpha
+    return max((-value(new_board, depth - 1, NEG_INFINITY, INFINITY), move)
+               for move, new_board in get_next_moves_fn(board))[1]
 
 ## Now you should be able to search twice as deep in the same amount of time.
 ## (Of course, this alpha-beta-player won't work until you've defined
@@ -105,13 +121,59 @@ ab_iterative_player = lambda board: \
 ## same depth.
 
 def better_evaluate(board):
-    raise NotImplementedError
+    def max_length_from_cell(row, col, playerid):
+        def contig_vector_length(row, col, direction):
+            count = 0
+            while (0 <= row < board.board_height and
+                   0 <= col < board.board_width and
+                   playerid == board.get_cell(row, col)):
+                row += direction[0]
+                col += direction[1]
+                count += 1
+            count0 = count
+            while (0 <= row < board.board_height and
+                   0 <= col < board.board_width and
+                   0 == board.get_cell(row, col)):
+                row += direction[0]
+                col += direction[1]
+                count0 += 1
+            return (count - 1, count0 - 1)
+        def length(x, y):
+            c1, c10 = contig_vector_length(row, col, (x,y))
+            c2, c20 = contig_vector_length(row, col, (-x,-y))
+            return c1 + c2 + 1 if c10 + c20 + 1 >= 4 else 0
+        return max(length(x, y) for x, y in ((1,1), (1,0), (0,1), (-1,1)))
+    score = 0
+    if board.is_game_over():
+        return -1000
+    for col in xrange(7):
+        if (board.get_height_of_column(col) > 0 and
+            board.do_move(col).is_win() == board.get_current_player_id()):
+            return 1000
+        for row in xrange(6):
+            c = board.get_cell(row, col)
+            if c == board.get_current_player_id():
+                score -= abs(3-col)
+            elif c == board.get_other_player_id():
+                score += abs(3-col)
+            else:
+                l = max_length_from_cell(row, col, board.get_current_player_id())
+                if l >= 4:
+                    score += 100
+                elif l == 3:
+                    score += 20
+                l = max_length_from_cell(row, col, board.get_other_player_id())
+                if l >= 4:
+                    score -= 100
+                elif l == 3:
+                    score -= 20
+    return score
 
 # Comment this line after you've fully implemented better_evaluate
-better_evaluate = memoize(basic_evaluate)
+# better_evaluate = memoize(basic_evaluate)
 
 # Uncomment this line to make your better_evaluate run faster.
-# better_evaluate = memoize(better_evaluate)
+better_evaluate = memoize(better_evaluate)
 
 # For debugging: Change this if-guard to True, to unit-test
 # your better_evaluate function.
@@ -128,9 +190,9 @@ if False:
     test_board_2 = ConnectFourBoard(board_array = board_tuples,
                                     current_player = 2)
     # better evaluate from player 1
-    print "%s => %s" %(test_board_1, better_evaluate(test_board_1))
+    print("%s => %s" %(test_board_1, better_evaluate(test_board_1)))
     # better evaluate from player 2
-    print "%s => %s" %(test_board_2, better_evaluate(test_board_2))
+    print("%s => %s" %(test_board_2, better_evaluate(test_board_2)))
 
 ## A player that uses alpha-beta and better_evaluate:
 your_player = lambda board: run_search_function(board,
@@ -152,7 +214,7 @@ your_player = lambda board: run_search_function(board,
 def run_test_game(player1, player2, board):
     assert isinstance(globals()[board], ConnectFourBoard), "Error: can't run a game using a non-Board object!"
     return run_game(globals()[player1], globals()[player2], globals()[board])
-    
+
 def run_test_search(search, board, depth, eval_fn):
     assert isinstance(globals()[board], ConnectFourBoard), "Error: can't run a game using a non-Board object!"
     return globals()[search](globals()[board], depth=depth,
@@ -165,16 +227,15 @@ def run_test_tree_search(search, board, depth):
                              eval_fn=tree_searcher.tree_eval,
                              get_next_moves_fn=tree_searcher.tree_get_next_move,
                              is_terminal_fn=tree_searcher.is_leaf)
-    
+
 ## Do you want us to use your code in a tournament against other students? See
 ## the description in the problem set. The tournament is completely optional
 ## and has no effect on your grade.
-COMPETE = (None)
+COMPETE = True
 
 ## The standard survey questions.
-HOW_MANY_HOURS_THIS_PSET_TOOK = ""
-WHAT_I_FOUND_INTERESTING = ""
-WHAT_I_FOUND_BORING = ""
+HOW_MANY_HOURS_THIS_PSET_TOOK = "42"
+WHAT_I_FOUND_INTERESTING = "42"
+WHAT_I_FOUND_BORING = "42"
 NAME = ""
 EMAIL = ""
-
